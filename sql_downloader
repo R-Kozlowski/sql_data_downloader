@@ -1,0 +1,78 @@
+import cx_Oracle,os,datetime
+import pandas as pd
+from datetime import datetime, timedelta
+
+
+
+#changing the path were this program was opened
+os.chdir(os.getcwd())
+
+def database_operations(site,service,sql_query,bu):
+
+    print(site)
+    print(service)
+
+    to_date = datetime.now()
+    from_date = to_date - timedelta(days=5)
+    
+    #set up Oracle SQL database connection
+    dsn_tns = cx_Oracle.makedsn(site, 'database_port', service_name=service)
+    #conn = cx_Oracle.connect(user='user_name', password='password', dsn=dsn_tns)
+    conn = cx_Oracle.connect(dsn=dsn_tns)
+
+    #SQL query
+    query = 'Select ' \
+            ':1 as "BU", ' \
+            '"column1" as "Column1" ' \
+            '"column2" as "Column2" ' \
+            'from "database_table" ' \
+            'where "column2" = :2'
+
+    #execute query
+    cur = conn.cursor()
+    cur.execute(query, (bu,'specific_value',))
+
+    #save query to the pandas table
+    rows = cur.fetchall()
+    sql_query_new = pd.DataFrame(rows, columns=[desc[0] for desc in cur.description])
+        
+    #showing the results
+    #sql_query_new = pd.read_sql(query, conn)
+    #print(sql_query_new)
+
+    #join tables
+    sql_query = pd.concat([sql_query,sql_query_new], axis=0)
+    
+    #closing the connection
+    cur.close()
+    conn.close()
+
+    return sql_query
+
+
+sql_query = pd.DataFrame()
+
+#different variants for each TMS database
+#BS
+sql_query = database_operations('link','name',sql_query,'BS')
+#CZ
+sql_query = database_operations('link','name',sql_query,'CZ')
+#DE
+sql_query = database_operations('link','name',sql_query,'DE')
+#HU
+sql_query = database_operations('link','name',sql_query,'HU')
+#IT
+sql_query = database_operations('link','name',sql_query,'IT')
+#NL
+sql_query = database_operations('link','name',sql_query,'NL')
+#PL 
+sql_query = database_operations('link','name',sql_query,'PL')
+#RO
+sql_query = database_operations('link','name',sql_query,'RO')
+#SK
+sql_query = database_operations('link','name',sql_query,'SK')
+
+#saving the result
+now = datetime.now()
+date_time = now.strftime("%d-%m-%Y %H-%M-%S")
+sql_query.to_excel(f"sql_results --- {date_time}.xlsx", index=False)
